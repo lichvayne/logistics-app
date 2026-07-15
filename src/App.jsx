@@ -20,6 +20,9 @@ import MyDocuments from './pages/MyDocuments.jsx';
 import BrokerPortal from './pages/BrokerPortal.jsx';
 import AuditLog from './pages/AuditLog.jsx';
 import PublicTrack from './pages/PublicTrack.jsx';
+import Home from './pages/Home.jsx';
+import About from './pages/About.jsx';
+import Career from './pages/Career.jsx';
 import { getAuth, subscribeAuth, canAccess } from './auth.js';
 
 function useAuth() {
@@ -38,6 +41,11 @@ function Guard({ auth, path, children }) {
     return children;
 }
 
+function RedirectToLogin() {
+    const loc = useLocation();
+    return <Navigate to={`/login?next=${encodeURIComponent(loc.pathname)}`} replace />;
+}
+
 export default function App() {
     const auth = useAuth();
 
@@ -49,7 +57,10 @@ export default function App() {
             <Route path="/track/:token" element={<PublicTrack />} />
             <Route path="/register"     element={<RegisterChat />} />
             <Route path="/post-load"    element={<LoadRegisterChat />} />
+            <Route path="/about"        element={<About />} />
+            <Route path="/career"       element={<Career />} />
             <Route path="*" element={
+                auth ? (
                 <Layout auth={auth}>
                     <Routes>
                         <Route path="/"            element={
@@ -76,6 +87,12 @@ export default function App() {
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </Layout>
+                ) : (
+                    <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="*" element={<RedirectToLogin />} />
+                    </Routes>
+                )
             } />
         </Routes>
     );

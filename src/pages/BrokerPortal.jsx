@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authFetch } from '../auth.js';
-import { useBrokerOrders } from '../api.js';
+import { useBrokerOrders, parseTenderApi } from '../api.js';
 import { formatMoney, formatRelTime } from '../format.js';
+import TenderResultCard from '../components/TenderResultCard.jsx';
 
 const SAMPLES = [
     {
@@ -54,6 +55,9 @@ export default function BrokerPortal() {
     const [sending, setSending] = useState(false);
     const [transcript, setTranscript] = useState([]);
     const [sessionId, setSessionId] = useState('');
+    const [mode, setMode] = useState('analyze'); // 'analyze' | 'chat'
+    const [parsed, setParsed] = useState(null);
+    const [parseErr, setParseErr] = useState('');
     const qc = useQueryClient();
     const { data: orders } = useBrokerOrders();
 
@@ -62,6 +66,20 @@ export default function BrokerPortal() {
         const trimmed = text.trim();
         if (!trimmed || sending) return;
         setSending(true);
+        setParseErr('');
+
+        if (mode === 'analyze') {
+            try {
+                const result = await parseTenderApi(trimmed);
+                setParsed(result);
+            } catch (err) {
+                setParseErr(err.message || 'Failed to parse tender');
+            } finally {
+                setSending(false);
+            }
+            return;
+        }
+
         setTranscript(t => [...t, { role: 'broker', text: trimmed, ts: Date.now() }]);
         setText('');
         try {
@@ -139,27 +157,45 @@ export default function BrokerPortal() {
                     <header className="brk-card-head">
                         <div>
                             <h2 className="brk-card-title">Rate confirmation</h2>
-                            <p className="brk-card-sub">Any freeform format — the parser handles it.</p>
+                            <p className="brk-card-sub">
+                                {mode === 'analyze'
+                                    ? 'AI extracts fields, runs margin math, and recommends accept/reject.'
+                                    : 'Chat with the ingestion agent — it creates the order for you.'}
+                            </p>
                         </div>
-                        <div className="brk-samples">
-                            {SAMPLES.map((s, i) => (
-                                <button
-                                    key={i}
-                                    type="button"
-                                    className="brk-sample"
-                                    onClick={() => setText(s.text)}
-                                    title={`Use sample: ${s.label}`}
-                                >
-                                    <SampleIcon kind={s.icon} />
-                                    <span>{s.label}</span>
-                                </button>
-                            ))}
+                        <div className="brk-mode">
+                            <button
+                                type="button"
+                                className={'brk-mode-tab' + (mode === 'analyze' ? ' is-on' : '')}
+                                onClick={() => setMode('analyze')}
+                            >AI analyzer</button>
+                            <button
+                                type="button"
+                                className={'brk-mode-tab' + (mode === 'chat' ? ' is-on' : '')}
+                                onClick={() => setMode('chat')}
+                            >Chat intake</button>
                         </div>
                     </header>
+                    <div className="brk-samples">
+                        {SAMPLES.map((s, i) => (
+                            <button
+                                key={i}
+                                type="button"
+                                className="brk-sample"
+                                onClick={() => setText(s.text)}
+                                title={`Use sample: ${s.label}`}
+                            >
+                                <SampleIcon kind={s.icon} />
+                                <span>{s.label}</span>
+                            </button>
+                        ))}
+                    </div>
                     <form onSubmit={submit} className="brk-form">
                         <textarea
                             className="brk-textarea"
-                            placeholder="Paste rate confirmation text here…"
+                            placeholder={mode === 'analyze'
+                                ? 'Paste the broker tender email or rate confirmation here…'
+                                : 'Paste rate confirmation text here…'}
                             value={text}
                             onChange={e => setText(e.target.value)}
                             rows={12}
@@ -174,26 +210,37 @@ export default function BrokerPortal() {
                                 {sending ? (
                                     <>
                                         <span className="brk-spinner" />
-                                        Parsing…
+                                        {mode === 'analyze' ? 'Analyzing…' : 'Parsing…'}
                                     </>
                                 ) : (
                                     <>
-                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                                        Parse & create order
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                                            {mode === 'analyze'
+                                                ? <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>
+                                                : <path d="M12 5v14M5 12h14"/>
+                                            }
+                                        </svg>
+                                        {mode === 'analyze' ? 'Analyze tender' : 'Parse & create order'}
                                     </>
                                 )}
                             </button>
-                            {transcript.length > 0 && (
+                            {(transcript.length > 0 || parsed) && (
                                 <button
                                     type="button"
                                     className="brk-clear"
-                                    onClick={() => { setTranscript([]); setSessionId(''); }}
-                                >Clear thread</button>
+                                    onClick={() => { setTranscript([]); setSessionId(''); setParsed(null); setParseErr(''); }}
+                                >Clear</button>
                             )}
                         </div>
                     </form>
 
-                    {transcript.length > 0 && (
+                    {parseErr && <div className="brk-parse-err">{parseErr}</div>}
+
+                    {mode === 'analyze' && parsed && (
+                        <TenderResultCard result={parsed} />
+                    )}
+
+                    {mode === 'chat' && transcript.length > 0 && (
                         <div className="brk-transcript">
                             {transcript.map((m, i) => (
                                 <div key={i} className={'brk-msg brk-msg--' + (m.role === 'broker' ? 'you' : m.error ? 'err' : 'agent')}>

@@ -3,12 +3,15 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { canAccess, clearAuth } from '../auth.js';
 import { useLang } from '../i18n.jsx';
 import AssistantDrawer from './AssistantDrawer.jsx';
+import DriverAssistant, { DriverAssistantFab } from './DriverAssistant.jsx';
 
 export default function Layout({ children, auth }) {
     const nav = useNavigate();
     const { t } = useLang();
     const principalType = auth?.principalType;
     const [chatOpen, setChatOpen] = useState(false);
+    const [driverAsstOpen, setDriverAsstOpen] = useState(false);
+    const isDriver = principalType === 'DRIVER';
 
     const links = [
         { to: '/',             key: 'nav_overview' },
@@ -128,7 +131,13 @@ export default function Layout({ children, auth }) {
                     </span>
                 </div>
             </footer>
-            {canChat && !chatOpen && (
+            {isDriver && !driverAsstOpen && (
+                <DriverAssistantFab onClick={() => setDriverAsstOpen(true)} />
+            )}
+            {isDriver && (
+                <DriverAssistant open={driverAsstOpen} onClose={() => setDriverAsstOpen(false)} />
+            )}
+            {!isDriver && canChat && !chatOpen && (
                 <button
                     className="chat-fab"
                     onClick={() => setChatOpen(true)}
@@ -153,7 +162,7 @@ export default function Layout({ children, auth }) {
                     <span className="chat-fab-pulse" aria-hidden="true" />
                 </button>
             )}
-            {canChat && <AssistantDrawer open={chatOpen} onClose={() => setChatOpen(false)} />}
+            {!isDriver && canChat && <AssistantDrawer open={chatOpen} onClose={() => setChatOpen(false)} />}
         </>
     );
 }

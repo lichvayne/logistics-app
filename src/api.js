@@ -317,3 +317,48 @@ export async function rejectPendingLoad(id, notes) {
     return j;
 }
 
+// ---- AI intake (Gemini-backed) ----
+export async function parseDocumentApi(file, docType) {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('docType', docType);
+    const r = await authFetch('/v1/ai/parse-document', { method: 'POST', body: fd });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+    return j;
+}
+
+export async function parseTenderApi(text) {
+    const r = await authFetch('/v1/ai/parse-tender', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+    return j;
+}
+
+export async function loadBriefApi(query) {
+    const r = await authFetch('/v1/ai/load-brief', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+    return j;
+}
+
+/** CES conversational chat. Returns { sessionId, response, upstreamStatus, upstreamError, raw }. */
+export async function cesChatApi(message, sessionId) {
+    const r = await authFetch('/v1/assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, sessionId: sessionId || '' })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+    return j;
+}
+

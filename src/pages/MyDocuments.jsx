@@ -1,4 +1,5 @@
-import { useMyProfile } from '../api.js';
+import { useCallback, useRef, useState } from 'react';
+import { useMyProfile, parseDocumentApi } from '../api.js';
 import { useT } from '../i18n.jsx';
 
 function addYears(dateStr, years) {
@@ -99,6 +100,238 @@ function DocCard({ badge, title, subtitle, number, issued, expires, statusLabel,
     );
 }
 
+const DOC_TYPES = [
+    { key: 'CDL',       label: 'CDL',              blurb: 'Class, endorsements, expiration' },
+    { key: 'MEDICAL',   label: 'Medical cert.',    blurb: 'DOT medical, examiner, expiry' },
+    { key: 'INSURANCE', label: 'Insurance',        blurb: 'Policy #, carrier, limit, expiry' },
+    { key: 'BOL',       label: 'BOL',              blurb: 'Shipper, consignee, weight, PCS' },
+    { key: 'POD',       label: 'POD',              blurb: 'Signed-by, condition, exceptions' },
+    { key: 'RATE_CON',  label: 'Rate confirmation', blurb: 'Broker, lane, rate, dates' },
+];
+
+function DocIntakePanel() {
+    const [docType, setDocType] = useState('CDL');
+    const [file, setFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [result, setResult] = useState(null);
+    const [error, setError] = useState('');
+    const [drag, setDrag] = useState(false);
+    const inputRef = useRef(null);
+
+    const pickFile = (f) => {
+        if (!f) return;
+        setFile(f);
+        setResult(null);
+        setError('');
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        if (f.type.startsWith('image/')) {
+            setPreviewUrl(URL.createObjectURL(f));
+        } else {
+            setPreviewUrl('');
+        }
+    };
+
+    const onDrop = useCallback((e) => {
+        e.preventDefault();
+        setDrag(false);
+        pickFile(e.dataTransfer.files?.[0]);
+    }, []);
+
+    const run = async () => {
+        if (!file || busy) return;
+        setBusy(true);
+        setError('');
+        try {
+            const r = await parseDocumentApi(file, docType);
+            setResult(r);
+        } catch (err) {
+            setError(err.message || 'Failed to parse document');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const reset = () => {
+        setFile(null);
+        setResult(null);
+        setError('');
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl('');
+        if (inputRef.current) inputRef.current.value = '';
+    };
+
+    return (
+        <section className="di-panel">
+            <header className="di-head">
+                <div>
+                    <div className="di-eyebrow">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>
+                        </svg>
+                        <span>AI intake · Gemini</span>
+                    </div>
+                    <h2 className="di-title">Upload a document — we&apos;ll fill the fields.</h2>
+                    <p className="di-sub">
+                        Snap or drop a CDL, medical certificate, BOL, POD, insurance card or rate confirmation.
+                        The intake agent extracts fields, flags issues, and files it — no forms.
+                    </p>
+                </div>
+            </header>
+
+            <div className="di-body">
+                <div className="di-left">
+                    <div className="di-types">
+                        {DOC_TYPES.map(dt => (
+                            <button
+                                key={dt.key}
+                                type="button"
+                                className={'di-type' + (docType === dt.key ? ' is-on' : '')}
+                                onClick={() => setDocType(dt.key)}
+                            >
+                                <span className="di-type-label">{dt.label}</span>
+                                <span className="di-type-blurb">{dt.blurb}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <label
+                        className={'di-drop' + (drag ? ' is-drag' : '') + (file ? ' has-file' : '')}
+                        onDragOver={e => { e.preventDefault(); setDrag(true); }}
+                        onDragLeave={() => setDrag(false)}
+                        onDrop={onDrop}
+                    >
+                        <input
+                            ref={inputRef}
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={e => pickFile(e.target.files?.[0])}
+                            hidden
+                        />
+                        {previewUrl ? (
+                            <img src={previewUrl} alt="preview" className="di-preview" />
+                        ) : file ? (
+                            <div className="di-file">
+                                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M6 2h9l4 4v16H6z"/><path d="M15 2v5h4"/>
+                                </svg>
+                                <span>{file.name}</span>
+                            </div>
+                        ) : (
+                            <div className="di-drop-empty">
+                                <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 3v13M6 9l6-6 6 6"/><path d="M4 17v3h16v-3"/>
+                                </svg>
+                                <div className="di-drop-title">Drop a file or click to browse</div>
+                                <div className="di-drop-sub">JPG, PNG, or PDF · up to 10 MB</div>
+                            </div>
+                        )}
+                    </label>
+
+                    <div className="di-actions">
+                        <button
+                            type="button"
+                            className="di-submit"
+                            disabled={!file || busy}
+                            onClick={run}
+                        >
+                            {busy ? (
+                                <><span className="di-spinner" /> Extracting…</>
+                            ) : (
+                                <>
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>
+                                    </svg>
+                                    Extract fields
+                                </>
+                            )}
+                        </button>
+                        {(file || result) && (
+                            <button type="button" className="di-clear" onClick={reset}>Reset</button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="di-right">
+                    {error && <div className="di-error">{error}</div>}
+                    {!result && !error && (
+                        <div className="di-empty">
+                            <div className="di-empty-badge">Awaiting upload</div>
+                            <div className="di-empty-hint">
+                                Extracted fields will land here in a form you can review before saving.
+                            </div>
+                        </div>
+                    )}
+                    {result && <ExtractedFields result={result} />}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function ExtractedFields({ result }) {
+    const fields = result.fields || {};
+    const warnings = result.warnings || [];
+    const conf = Math.round((result.confidence || 0) * 100);
+    const src = result.source || 'gemini';
+    const entries = Object.entries(fields);
+
+    return (
+        <div className="di-result">
+            <div className="di-result-head">
+                <div>
+                    <div className="di-result-type">{result.docType || 'DOC'}</div>
+                    <div className="di-result-summary">{result.summary || 'Extracted fields'}</div>
+                </div>
+                <div className="di-result-meta">
+                    <span>Confidence <b>{conf}%</b></span>
+                    <span>Source <b className={src === 'mock' ? 'di-src-mock' : 'di-src-live'}>{src === 'mock' ? 'mock' : 'Gemini'}</b></span>
+                </div>
+            </div>
+
+            {entries.length === 0 ? (
+                <div className="di-empty-hint">No fields extracted.</div>
+            ) : (
+                <dl className="di-kv">
+                    {entries.map(([k, v]) => (
+                        <div key={k}>
+                            <dt>{k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</dt>
+                            <dd>
+                                {Array.isArray(v)
+                                    ? (v.length ? v.join(', ') : '—')
+                                    : (v == null || v === '' ? '—' : String(v))}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+            )}
+
+            {warnings.length > 0 && (
+                <ul className="di-warnings">
+                    {warnings.map((w, i) => (
+                        <li key={i}>
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.5"/>
+                            </svg>
+                            {w}
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            <div className="di-result-actions">
+                <button type="button" className="di-save">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                    Save to file
+                </button>
+                <button type="button" className="di-review">Edit before saving</button>
+            </div>
+        </div>
+    );
+}
+
 export default function MyDocuments() {
     const t = useT();
     const { data: profile, isLoading } = useMyProfile();
@@ -179,6 +412,8 @@ export default function MyDocuments() {
                     return <DocCard key={d.title} {...d} statusLabel={label} tone={tone} i={i} />;
                 })}
             </div>
+
+            <DocIntakePanel />
         </>
     );
 }
