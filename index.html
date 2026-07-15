@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Logistics APP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet"/>
+    <script defer src="https://www.gstatic.com/chat-messenger/sdk/prod/v1.16/chat-messenger.js"></script>
+    <link rel="stylesheet" href="https://www.gstatic.com/chat-messenger/sdk/prod/v1.16/themes/chat-messenger-default.css"/>
+    <link rel="stylesheet" href="https://www.gstatic.com/chat-messenger/sdk/prod/v1.16/themes/chat-messenger-layout.css"/>
+    <script>
+      window.addEventListener('chat-messenger-loaded', () => {
+        window.chatSdk.registerContext(
+          window.chatSdk.prebuilts.ces.createContext({
+            deploymentName: 'projects/563870174574/locations/us/apps/61dce820-d7ec-4f70-8866-26a22f9cfbb3/deployments/728c84f2-6ea0-4aeb-9cfd-25e399984537',
+            tokenBroker: {
+              enableTokenBroker: true,
+              enableRecaptcha: false,
+            },
+          }),
+        );
+      });
+    </script>
+</head>
+<body>
+<script>
+  // spa-github-pages: restore the real path stashed by 404.html before the SPA boots.
+  (function () {
+    var l = window.location;
+    if (l.search.slice(1).indexOf('p=/') === 0 || l.search.indexOf('&p=/') > 0) {
+      var q = l.search.slice(1).split('&').reduce(function (acc, kv) {
+        var i = kv.indexOf('='); if (i < 0) return acc;
+        acc[kv.slice(0, i)] = kv.slice(i + 1); return acc;
+      }, {});
+      if (q.p !== undefined) {
+        var path = (q.p || '').replace(/~and~/g, '&');
+        var search = q.q ? '?' + q.q.replace(/~and~/g, '&') : '';
+        window.history.replaceState(null, '', l.pathname.slice(0, -1) + path + search + l.hash);
+      }
+    }
+  })();
+</script>
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
