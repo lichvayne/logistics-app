@@ -89,7 +89,7 @@ export default function Login() {
 
     return (
         <div className="login-shell">
-            <aside className="login-hero" style={{ backgroundImage: 'url(/img/login/hero.jpg)' }} aria-hidden="true">
+            <aside className="login-hero" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}img/login/hero.jpg)` }} aria-hidden="true">
                 <div className="login-hero-caption">
                     <h2>{t('brand')}</h2>
                     <p>Move freight, not paperwork. Dispatchers, drivers, and brokers on one screen.</p>

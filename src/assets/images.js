@@ -55,20 +55,21 @@ const LOAD_POOLS = {
 };
 const LOAD_DEFAULT_POOL = LOAD_POOLS['Dry Van'];
 
+const BASE = import.meta.env.BASE_URL;
 const TRAILER_POOL = [
-    '/img/trailers/u1.jpg',
-    '/img/trailers/u2.jpg',
-    '/img/trailers/u3.jpg',
-    '/img/trailers/u4.jpg',
-    '/img/trailers/u5.jpg',
-    '/img/trailers/u7.jpg',
-    '/img/trailers/u8.jpg',
-    '/img/trailers/u9.jpg',
-    '/img/trailers/u10.jpg',
-    '/img/trailers/u11.jpg',
-    '/img/trailers/u12.jpg',
-    '/img/trailers/u13.jpg',
-    '/img/trailers/u14.jpg'
+    `${BASE}img/trailers/u1.jpg`,
+    `${BASE}img/trailers/u2.jpg`,
+    `${BASE}img/trailers/u3.jpg`,
+    `${BASE}img/trailers/u4.jpg`,
+    `${BASE}img/trailers/u5.jpg`,
+    `${BASE}img/trailers/u7.jpg`,
+    `${BASE}img/trailers/u8.jpg`,
+    `${BASE}img/trailers/u9.jpg`,
+    `${BASE}img/trailers/u10.jpg`,
+    `${BASE}img/trailers/u11.jpg`,
+    `${BASE}img/trailers/u12.jpg`,
+    `${BASE}img/trailers/u13.jpg`,
+    `${BASE}img/trailers/u14.jpg`
 ];
 
 function hash(str) {
